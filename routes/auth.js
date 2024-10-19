@@ -18,6 +18,7 @@ router.post("/register", async (req, res) => {
     lastName,
     gender,
     dateOfBirth,
+    phoneNumber
   } = req.body;
 
   try {
@@ -40,6 +41,7 @@ router.post("/register", async (req, res) => {
       lastName,
       gender,
       dateOfBirth,
+      phoneNumber,
       isEmailConfirmed: false,
       confirmationCode,
       confirmationCodeExpires,
@@ -152,7 +154,9 @@ router.post("/login", async (req, res) => {
 
 // Request password reset
 router.post("/request-password-reset", async (req, res) => {
+ 
   const { email } = req.body;
+  console.log(email)
 
   try {
     const user = await User.findOne({ email });
@@ -160,40 +164,64 @@ router.post("/request-password-reset", async (req, res) => {
       return res.status(400).json({ message: "User not found" });
     }
 
-    const resetToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "1h",
-    });
-    const resetLink = `http://your-app-url/reset-password/${resetToken}`; // Update with your app URL
+    // Generate a 6-digit code
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const resetCodeExpires = Date.now() + 15 * 60 * 1000; // Code expires in 15 minutes
 
-    // Send reset email
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: "Password Reset Request",
-      text: `To reset your password, click the link: ${resetLink}`,
-    });
+    // Update user with the new reset code and expiration
+    user.resetCode = resetCode;
+    user.resetCodeExpires = resetCodeExpires;
+    await user.save();
 
-    res.json({ message: "Password reset link sent to your email." });
+    // Send reset code email
+    await sendConfirmationEmail(email, user.username, resetCode); // Adjust to your email service
+
+    res.json({ message: "Reset code sent to your email." });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Verify reset code and allow password reset
+router.post("/verify-reset-code", async (req, res) => {
+  const { email, code } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if the code is correct and not expired 
+    if (
+      user.resetCode !== code ||
+      Date.now() > user.resetCodeExpires
+    ) {
+      return res.status(400).json({ message: "Invalid or expired code" });
+    }
+
+    res.json({ message: "Code verified successfully. You can now reset your password." });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
 // Reset password
-router.post("/reset-password/:token", async (req, res) => {
-  const { password } = req.body;
-  const { token } = req.params;
+router.post("/reset-password", async (req, res) => {
+  const { email, password } = req.body;
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id);
+    const user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(400).json({ message: "Invalid token" });
+      return res.status(400).json({ message: "User not found" });
     }
 
     // Hash the new password
     user.password = await bcrypt.hash(password, 10);
+    user.resetCode = undefined; // Clear the reset code
+    user.resetCodeExpires = undefined; // Clear expiration
     await user.save();
 
     res.json({ message: "Password reset successfully." });
@@ -205,19 +233,7 @@ router.post("/reset-password/:token", async (req, res) => {
 // Logout route
 router.post("/logout", auth, (req, res) => {
   try {
-    // Get the socket ID from the request (you might need to store it when the user connects)
-    const socketId = req.user.socketId; // Example: retrieve the socketId from the user object
-
-    if (socketId) {
-      // Disconnect the socket
-      const socket = io.sockets.sockets.get(socketId);
-      if (socket) {
-        socket.disconnect(true); // Forcefully disconnect the socket
-      }
-    }
-
-    // Optionally, handle blacklisting the token here
-
+    // Handle logout logic here
     res.json({ message: "Logged out successfully." });
   } catch (error) {
     res.status(500).json({ message: error.message });
