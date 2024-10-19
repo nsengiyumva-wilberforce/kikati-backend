@@ -10,7 +10,15 @@ const router = express.Router();
 
 // Registration route
 router.post("/register", async (req, res) => {
-  const { username, password, email, firstName, lastName, gender, dateOfBirth } = req.body;
+  const {
+    username,
+    password,
+    email,
+    firstName,
+    lastName,
+    gender,
+    dateOfBirth,
+  } = req.body;
 
   try {
     const existingUser = await User.findOne({ username });
@@ -19,7 +27,9 @@ router.post("/register", async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const confirmationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const confirmationCode = Math.floor(
+      100000 + Math.random() * 900000
+    ).toString();
     const confirmationCodeExpires = Date.now() + 15 * 60 * 1000; // Code expires in 15 minutes
 
     const newUser = new User({
@@ -39,13 +49,13 @@ router.post("/register", async (req, res) => {
     await sendConfirmationEmail(email, username, confirmationCode);
 
     res.status(201).json({
-      message: "User created successfully, a 6-digit code has been sent to your email for confirmation, and it will expire in 15 minutes.",
+      message:
+        "User created successfully, a 6-digit code has been sent to your email for confirmation, and it will expire in 15 minutes.",
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
-
 
 // Verify confirmation code
 router.post("/verify-code", async (req, res) => {
@@ -94,7 +104,9 @@ router.post("/resend-code", async (req, res) => {
     }
 
     // Generate a new confirmation code
-    const confirmationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const confirmationCode = Math.floor(
+      100000 + Math.random() * 900000
+    ).toString();
     const confirmationCodeExpires = Date.now() + 15 * 60 * 1000; // Code expires in 15 minutes
 
     // Update user with the new code and expiration
@@ -110,7 +122,6 @@ router.post("/resend-code", async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
-
 
 // Login a user
 router.post("/login", async (req, res) => {

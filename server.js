@@ -7,9 +7,11 @@ const socketIo = require("socket.io");
 const authRoutes = require("./routes/auth");
 const messageRoutes = require("./routes/messages");
 const groupRoutes = require("./routes/groups");
-//create an express app
+const path = require("path");
+
+// Create an express app
 const app = express();
-//create the server
+// Create the server
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
@@ -21,6 +23,9 @@ const io = socketIo(server, {
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Serve static files from the 'public' directory
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Connect to MongoDB
 mongoose
@@ -37,40 +42,48 @@ app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes(io));
 app.use("/api/groups", groupRoutes(io));
 
+// Serve index.html on root route
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html")); // Adjust the path as needed
+});
+
 // Socket.IO Events
 io.on("connection", (socket) => {
-  console.log("initial transport", socket.conn.transport.name); // prints "polling"
-  console.log(socket.data)
+  console.log("initial transport", socket.conn.transport.name);
+  console.log(socket.data);
   socket.conn.once("upgrade", () => {
-    // called when the transport is upgraded (i.e. from HTTP long-polling to WebSocket)
-    console.log("upgraded transport", socket.conn.transport.name); // prints "websocket"
+    console.log("upgraded transport", socket.conn.transport.name);
   });
-
 
   // When a user connects, register them as online
   socket.on("registerUser", (username) => {
     onlineUsers.add(username);
-    io.emit("activeUsers", Array.from(onlineUsers).map(user => ({
-      username: user,
-      lastActive: activeUsers.get(user) || null, // Include last active time if exists
-    }))); // Emit active users with timestamps to all clients
+    io.emit(
+      "activeUsers",
+      Array.from(onlineUsers).map((user) => ({
+        username: user,
+        lastActive: activeUsers.get(user) || null,
+      }))
+    );
   });
 
   // When a user disconnects, update their last active time
   socket.on("disconnect", () => {
-    const username = [...onlineUsers].find(user => user === socket.username); // Get the username
+    const username = [...onlineUsers].find((user) => user === socket.username);
     if (username) {
-      onlineUsers.delete(username); // Remove from online users
-      activeUsers.set(username, new Date()); // Update last active time
-      io.emit("activeUsers", Array.from(onlineUsers).map(user => ({
-        username: user,
-        lastActive: activeUsers.get(user) || null,
-      }))); // Emit updated list to all clients
+      onlineUsers.delete(username);
+      activeUsers.set(username, new Date());
+      io.emit(
+        "activeUsers",
+        Array.from(onlineUsers).map((user) => ({
+          username: user,
+          lastActive: activeUsers.get(user) || null,
+        }))
+      );
     }
     console.log("Client disconnected");
   });
 });
-
 
 const PORT = process.env.PORT || 5000;
 
