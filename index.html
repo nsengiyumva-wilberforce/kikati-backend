@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Socket.IO Chat Test</title>
+  <script src="http://localhost:5000/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <h1>Socket.IO Chat Test</h1>
+  
+  <input id="username" placeholder="Username" />
+  <input id="password" type="password" placeholder="Password" />
+  <button onclick="login()">Login</button>
+  <div id="loginStatus"></div>
+  
+  <div id="userDetails" style="display: none;">
+    <h2>Logged In User:</h2>
+    <p id="userInfo"></p>
+    <h3>Active Users:</h3>
+    <ul id="activeUsersList"></ul> <!-- List to show active users -->
+  </div>
+  
+  <input id="message" placeholder="Message" />
+  <button onclick="sendMessage()">Send</button>
+  <ul id="messages"></ul>
+  <div id="status"></div>
+
+  <script>
+    let socket;
+
+    async function login() {
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
+
+      // Make a POST request to your login endpoint
+      const response = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const token = data.token;
+
+        // Connect to Socket.IO with the token
+        connectSocket(token, username);
+        document.getElementById("loginStatus").innerHTML = "Logged in successfully!";
+      } else {
+        const error = await response.json();
+        document.getElementById("loginStatus").innerHTML = "Login failed: " + error.message;
+      }
+    }
+
+    function connectSocket(token, username) {
+      socket = io("http://localhost:5000", {
+        auth: {
+          token: token, // Send the JWT token during connection
+        },
+      });
+
+      // Check connection status
+      socket.on("connect", () => {
+        document.getElementById("status").innerHTML = "Connected to the server!";
+        console.log("Successfully connected to Socket.IO server");
+
+        // Register the user to the active users list
+        socket.emit("registerUser", username);
+
+        // Display logged-in user details
+        document.getElementById("userDetails").style.display = "block";
+        document.getElementById("userInfo").textContent = `Username: ${username}`;
+      });
+
+      // Listen for active users updates
+      socket.on("activeUsers", (activeUsers) => {
+        const activeUsersList = document.getElementById("activeUsersList");
+        activeUsersList.innerHTML = ""; // Clear previous list
+
+        activeUsers.forEach(({ username, lastActive }) => {
+          const li = document.createElement("li");
+          const status = lastActive ? ` (Last active: ${new Date(lastActive).toLocaleTimeString()})` : " (Online)";
+          li.textContent = `${username}${status}`; // Display username and last active time
+          activeUsersList.appendChild(li);
+        });
+      });
+
+      // Handle connection error
+      socket.on("connect_error", (error) => {
+        document.getElementById("status").innerHTML = "Connection failed: " + error.message;
+        console.error("Connection Error:", error);
+      });
+
+      // Handle disconnection
+      socket.on("disconnect", () => {
+        document.getElementById("status").innerHTML = "Disconnected from the server";
+        console.log("Disconnected from Socket.IO server");
+      });
+
+      // Listen for incoming messages
+      socket.on("messageReceived", (data) => {
+        const messagesList = document.getElementById("messages");
+        const li = document.createElement("li");
+        li.textContent = `${data.sender}: ${data.content}`;
+        messagesList.appendChild(li);
+      });
+    }
+
+    // Send message to the server
+    function sendMessage() {
+      const message = document.getElementById("message").value;
+      socket.emit("sendMessage", { sender: document.getElementById("username").value, content: message });
+      document.getElementById("message").value = ""; // Clear the input field
+    }
+  </script>
+</body>
+</html>
