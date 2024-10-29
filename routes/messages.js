@@ -1,42 +1,63 @@
 const express = require("express");
+const multer = require("multer");
 const auth = require("../middleware/auth"); // Your auth middleware
 const emailVerified = require("../middleware/email-verified"); // Your email verification middleware
 const Message = require("../models/Message");
 
 const router = express.Router();
+const upload = multer({ dest: "uploads/" }); // Specify the upload directory
 
 module.exports = (io, activeUsers) => {
   // Send a message
-  router.post("/send", auth, emailVerified, async (req, res) => {
-    const { recipient, content } = req.body;
+  router.post(
+    "/send",
+    auth,
+    emailVerified,
+    upload.array("media"),
+    async (req, res) => {
+      const { recipient, content } = req.body;
 
-    try {
-      const message = new Message({
-        sender: req.user.id,
-        recipient,
-        content,
-      });
+      try {
+        const mediaFiles = req.files
+          ? req.files.map((file) => ({
+              url: `/uploads/${file.filename}`, // Assuming you're serving files from the 'uploads' directory
+              type: file.mimetype.startsWith("image/")
+                ? "image"
+                : file.mimetype.startsWith("video/")
+                ? "video"
+                : "file",
+              filename: file.originalname,
+            }))
+          : [];
 
-      await message.save();
-
-      // Check if the recipient is online and emit the message directly to them
-      if (activeUsers.has(recipient)) {
-        console.log("user found........");
-        const recipientSocketId = activeUsers.get(recipient);
-        io.to(recipientSocketId).emit("directMessage", {
+        const message = new Message({
           sender: req.user.id,
+          recipient,
           content,
+          media: mediaFiles, // Include media files
         });
-      } else {
-        console.log("user not found.....");
-      }
 
-      res.status(201).json({ message: "Message sent successfully", message });
-    } catch (error) {
-      console.log(error);
-      res.status(500).json({ message: "Server error" });
+        await message.save();
+
+        // Check if the recipient is online and emit the message directly to them
+        if (activeUsers.has(recipient)) {
+          const recipientSocketId = activeUsers.get(recipient);
+          io.to(recipientSocketId).emit("directMessage", {
+            sender: req.user.id,
+            content,
+            media: mediaFiles, // Include media in the emitted message
+          });
+        } else {
+          console.log("user not found.....");
+        }
+
+        res.status(201).json({ message: "Message sent successfully", message });
+      } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: "Server error" });
+      }
     }
-  });
+  );
   // Get messages between users
   router.get(
     "/conversation/:recipientId",

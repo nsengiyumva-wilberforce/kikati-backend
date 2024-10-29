@@ -43,6 +43,7 @@ const activeUsers = new Map(); // Map to store username and socket ID
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes(io, activeUsers)); // Pass activeUsers map
 app.use("/api/groups", groupRoutes(io));
+app.use("/uploads", express.static("uploads"));
 
 // Serve index.html on root route
 app.get("/", (req, res) => {
@@ -66,7 +67,6 @@ io.on("connection", (socket) => {
 
     console.log(activeUsers);
   });
-  
 
   // When a user disconnects, remove them from active users
   socket.on("disconnect", () => {

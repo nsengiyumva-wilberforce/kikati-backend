@@ -92,7 +92,9 @@ module.exports = (io) => {
       const group = await Group.findById(groupId);
 
       if (!group || !group.members.includes(req.user.id)) {
-        return res.status(403).json({ message: "User not a member of the group" });
+        return res
+          .status(403)
+          .json({ message: "User not a member of the group" });
       }
 
       const message = new Message({
@@ -120,7 +122,10 @@ module.exports = (io) => {
   // Optional: Get group details
   router.get("/:id", auth, emailVerified, async (req, res) => {
     try {
-      const group = await Group.findById(req.params.id).populate("members", "username"); // Populate with member usernames
+      const group = await Group.findById(req.params.id).populate(
+        "members",
+        "username"
+      ); // Populate with member usernames
 
       if (!group) {
         return res.status(404).json({ message: "Group not found" });
@@ -135,4 +140,3 @@ module.exports = (io) => {
 
   return router;
 };
-
