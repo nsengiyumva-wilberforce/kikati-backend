@@ -18,7 +18,7 @@ router.post("/register", async (req, res) => {
     lastName,
     gender,
     dateOfBirth,
-    phoneNumber
+    phoneNumber,
   } = req.body;
 
   try {
@@ -154,9 +154,8 @@ router.post("/login", async (req, res) => {
 
 // Request password reset
 router.post("/request-password-reset", async (req, res) => {
- 
   const { email } = req.body;
-  console.log(email)
+  console.log(email);
 
   try {
     const user = await User.findOne({ email });
@@ -193,15 +192,14 @@ router.post("/verify-reset-code", async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Check if the code is correct and not expired 
-    if (
-      user.resetCode !== code ||
-      Date.now() > user.resetCodeExpires
-    ) {
+    // Check if the code is correct and not expired
+    if (user.resetCode !== code || Date.now() > user.resetCodeExpires) {
       return res.status(400).json({ message: "Invalid or expired code" });
     }
 
-    res.json({ message: "Code verified successfully. You can now reset your password." });
+    res.json({
+      message: "Code verified successfully. You can now reset your password.",
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

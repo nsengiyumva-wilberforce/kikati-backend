@@ -8,6 +8,7 @@ const authRoutes = require("./routes/auth");
 const messageRoutes = require("./routes/messages");
 const groupRoutes = require("./routes/groups");
 const path = require("path");
+const socketAuth = require("./middleware/socketAuth");
 
 // Create an express app
 const app = express();
@@ -17,15 +18,17 @@ const io = socketIo(server, {
   cors: {
     origin: "*", // Update to your frontend URL in production
     methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
   },
 });
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+io.use(socketAuth);
 
 // Serve static files from the 'public' directory
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, "public")));
 
 // Connect to MongoDB
 mongoose
@@ -34,12 +37,11 @@ mongoose
   .catch((err) => console.log(err));
 
 // Store active users and their last active time
-const activeUsers = new Map(); // Map to store username and timestamp of last active
-const onlineUsers = new Set(); // Set to track currently online users
+const activeUsers = new Map(); // Map to store username and socket ID
 
 // Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/messages", messageRoutes(io));
+app.use("/api/messages", messageRoutes(io, activeUsers)); // Pass activeUsers map
 app.use("/api/groups", groupRoutes(io));
 
 // Serve index.html on root route
@@ -49,35 +51,35 @@ app.get("/", (req, res) => {
 
 // Socket.IO Events
 io.on("connection", (socket) => {
-  console.log("initial transport", socket.conn.transport.name);
-  console.log(socket.data);
-  socket.conn.once("upgrade", () => {
-    console.log("upgraded transport", socket.conn.transport.name);
-  });
+  console.log("Client connected");
 
   // When a user connects, register them as online
   socket.on("registerUser", (username) => {
-    onlineUsers.add(username);
+    activeUsers.set(username, socket.id); // Store the username and socket ID
     io.emit(
       "activeUsers",
-      Array.from(onlineUsers).map((user) => ({
+      Array.from(activeUsers.keys()).map((user) => ({
         username: user,
-        lastActive: activeUsers.get(user) || null,
+        lastActive: null, // You can customize this as needed
       }))
     );
-  });
 
-  // When a user disconnects, update their last active time
+    console.log(activeUsers);
+  });
+  
+
+  // When a user disconnects, remove them from active users
   socket.on("disconnect", () => {
-    const username = [...onlineUsers].find((user) => user === socket.username);
+    const username = [...activeUsers.keys()].find(
+      (user) => activeUsers.get(user) === socket.id
+    );
     if (username) {
-      onlineUsers.delete(username);
-      activeUsers.set(username, new Date());
+      activeUsers.delete(username);
       io.emit(
         "activeUsers",
-        Array.from(onlineUsers).map((user) => ({
+        Array.from(activeUsers.keys()).map((user) => ({
           username: user,
-          lastActive: activeUsers.get(user) || null,
+          lastActive: null, // Update as necessary
         }))
       );
     }

@@ -13,7 +13,7 @@ const authenticateSocket = (socket, next) => {
       return next(new Error("Authentication error"));
     }
     socket.userId = decoded.id; // Store user ID in socket for later use
-    socket.username=decoded.username
+    socket.username = decoded.username;
     next();
   });
 };

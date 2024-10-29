@@ -16,7 +16,11 @@ const UserSchema = new mongoose.Schema({
   },
   firstName: { type: String, required: true },
   lastName: { type: String, required: true },
-  gender: { type: String, enum: ['male', 'female', 'other', 'Female', 'Male', 'Other'], required: true },
+  gender: {
+    type: String,
+    enum: ["male", "female", "other", "Female", "Male", "Other"],
+    required: true,
+  },
   dateOfBirth: { type: Date, required: true },
   phoneNumber: {
     type: String,
@@ -28,7 +32,7 @@ const UserSchema = new mongoose.Schema({
   confirmationCode: { type: String }, // Confirmation code
   confirmationCodeExpires: { type: Date }, // Code expiration time
   resetCode: { type: String },
-  resetCodeExpires: { type: Date}  
+  resetCodeExpires: { type: Date },
 });
 
 module.exports = mongoose.model("User", UserSchema);
