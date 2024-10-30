@@ -68,6 +68,20 @@ io.on("connection", (socket) => {
     console.log(activeUsers);
   });
 
+  // Handle incoming direct messages
+  socket.on("sendMessage", ({ recipient, content }) => {
+    const recipientSocketId = activeUsers.get(recipient);
+    if (recipientSocketId) {
+      io.to(recipientSocketId).emit("directMessage", {
+        sender: [...activeUsers.keys()].find(user => activeUsers.get(user) === socket.id),
+        content,
+      });
+      console.log(`Message from ${sender} to ${recipient}: ${content}`);
+    } else {
+      console.log(`User ${recipient} not found`);
+    }
+  });
+
   // When a user disconnects, remove them from active users
   socket.on("disconnect", () => {
     const username = [...activeUsers.keys()].find(
@@ -86,6 +100,7 @@ io.on("connection", (socket) => {
     console.log("Client disconnected");
   });
 });
+
 
 const PORT = process.env.PORT || 5000;
 
