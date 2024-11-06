@@ -48,7 +48,7 @@ module.exports = (io, activeUsers) => {
             media: mediaFiles, // Include media in the emitted message
           });
         } else {
-          console.log("user not found.....");
+          console.log("User not found...");
         }
 
         res.status(201).json({ message: "Message sent successfully", message });
@@ -58,6 +58,7 @@ module.exports = (io, activeUsers) => {
       }
     }
   );
+
   // Get messages between users
   router.get(
     "/conversation/:recipientId",
@@ -65,15 +66,19 @@ module.exports = (io, activeUsers) => {
     emailVerified,
     async (req, res) => {
       const { recipientId } = req.params;
-
+      console.log("Recipient ID:", recipientId);
+      console.log("User ID:", req.user.id);
       try {
         const messages = await Message.find({
           $or: [
             { sender: req.user.id, recipient: recipientId },
             { sender: recipientId, recipient: req.user.id },
           ],
-        }).sort({ createdAt: 1 }); // Sort by creation date
-
+        })
+        .sort({ createdAt: 1 }) // Sort by creation date
+        .populate('sender', 'username') // Populate sender with username
+        .populate('recipient', 'username'); // Populate recipient with username
+  
         res.status(200).json(messages);
       } catch (error) {
         console.log(error);
@@ -81,6 +86,7 @@ module.exports = (io, activeUsers) => {
       }
     }
   );
+  
 
   // Get all messages for the logged-in user
   router.get("/", auth, emailVerified, async (req, res) => {
@@ -119,6 +125,23 @@ module.exports = (io, activeUsers) => {
       res.status(200).json({ message: "Message deleted successfully" });
     } catch (error) {
       console.log(error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // GET route to fetch active users
+  router.get("/active-users", auth, emailVerified, (req, res) => {
+    try {
+      // Prepare the active users data from the activeUsers Map
+      const activeUserList = Array.from(activeUsers.entries()).map(([userId, socketId]) => ({
+        userId,
+        socketId,
+      }));
+
+      // Send the list of active users back in the response
+      res.status(200).json(activeUserList);
+    } catch (error) {
+      console.log("Error fetching active users:", error);
       res.status(500).json({ message: "Server error" });
     }
   });

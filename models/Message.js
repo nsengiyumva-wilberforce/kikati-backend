@@ -16,6 +16,8 @@ const MessageSchema = new mongoose.Schema({
     default: [] // Default to an empty array if no media is sent
   },
   timestamp: { type: Date, default: Date.now },
+  isActive: { type: Boolean, default: true },
+  lastActive: { type: Date, default: Date.now },
 });
 
 module.exports = mongoose.model("Message", MessageSchema);

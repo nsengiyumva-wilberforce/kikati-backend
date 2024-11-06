@@ -3,33 +3,74 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Socket.IO Chat Test</title>
+    <title>Socket.IO Chat</title>
     <script src="https://ki-kati.com/socket.io/socket.io.js"></script>
+
+    <link rel="stylesheet" href="styles/style.css" />
   </head>
+
   <body>
-    <h1>Socket.IO Chat Test</h1>
+    <div class="chat-container">
+      <h1 class="chat-header">KI KATI</h1>
 
-    <input id="username" placeholder="Username" />
-    <input id="password" type="password" placeholder="Password" />
-    <button onclick="login()">Login</button>
-    <div id="loginStatus"></div>
+      <div id="loginStatus"></div>
 
-    <div id="userDetails" style="display: none">
-      <h2>Logged In User:</h2>
-      <p id="userInfo"></p>
-      <h3>Active Users:</h3>
-      <ul id="activeUsersList"></ul>
-      <select id="recipientSelect"></select>
-      <!-- Dropdown to select recipient -->
-      <input id="message" placeholder="Message" />
-      <button onclick="sendMessage()">Send</button>
-      <ul id="messages"></ul>
+      <div id="loginForm" class="input-container">
+        <input id="username" type="text" placeholder="Username" />
+        <input id="password" type="password" placeholder="Password" />
+        <button onclick="login()">Login</button>
+      </div>
+
+      <div id="userDetails">
+        <h3>Welcome, <span id="userInfo"></span></h3>
+
+        <div>
+          <h4>Active Users</h4>
+          <ul id="activeUsersList" class="active-users-list"></ul>
+        </div>
+
+        <div>
+          <h4>Send Message</h4>
+          <select id="recipientSelect"></select>
+          <textarea
+            id="message"
+            rows="3"
+            placeholder="Type your message..."
+            style="width: 100%; padding: 10px; border-radius: 5px"
+          ></textarea>
+          <button onclick="sendMessage()">Send</button>
+        </div>
+
+        <div class="chat-box" id="messages"></div>
+
+        <!-- Logout Button -->
+        <div>
+          <button onclick="logout()">Logout</button>
+        </div>
+      </div>
+
       <div id="status"></div>
     </div>
 
     <script>
       let socket;
+      let isConnected = false;
 
+      // Check if token exists in localStorage when the page loads
+      window.onload = () => {
+        const token = localStorage.getItem("token");
+        if (token) {
+          const username = localStorage.getItem("username"); // Get username from localStorage
+          connectSocket(token, username); // Automatically connect to socket if already logged in
+          document.getElementById("loginForm").style.display = "none";
+          document.getElementById("userDetails").style.display = "block";
+          document.getElementById(
+            "userInfo"
+          ).textContent = `Logged In Username: ${username}`;
+        }
+      };
+
+      // Login function
       async function login() {
         const username = document.getElementById("username").value;
         const password = document.getElementById("password").value;
@@ -47,10 +88,15 @@
           const data = await response.json();
           const token = data.token;
 
+          // Store token and username in localStorage
+          localStorage.setItem("token", token);
+          localStorage.setItem("username", username);
+
           // Connect to Socket.IO with the token
           connectSocket(token, username);
           document.getElementById("loginStatus").innerHTML =
             "Logged in successfully!";
+          document.getElementById("loginForm").style.display = "none";
         } else {
           const error = await response.json();
           document.getElementById("loginStatus").innerHTML =
@@ -58,14 +104,46 @@
         }
       }
 
+      // Fetch active users from the API endpoint
+      async function fetchActiveUsers() {
+        try {
+          const response = await fetch(
+            "https://ki-kati.com/api/messages/active-users",
+            {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`, // Send the token in the request header
+              },
+            }
+          );
+
+          if (response.ok) {
+            const activeUsers = await response.json();
+            updateActiveUsersList(activeUsers);
+          } else {
+            console.error(
+              "Failed to fetch active users:",
+              await response.json()
+            );
+          }
+        } catch (error) {
+          console.error("Error fetching active users:", error);
+        }
+      }
+
+      // Connect to Socket.IO with the provided token
       function connectSocket(token, username) {
-        socket = io("https://ki-kati.com", {
+        // Check if there is already a socket connection
+        if (isConnected) {
+          socket.close();
+        }
+
+        socket = io("http://localhost:5000", {
           auth: {
             token: token, // Send the JWT token during connection
           },
         });
 
-        // Check connection status
         socket.on("connect", () => {
           document.getElementById("status").innerHTML =
             "Connected to the server!";
@@ -79,68 +157,195 @@
           document.getElementById(
             "userInfo"
           ).textContent = `Logged In Username: ${username}`;
+
+          isConnected = true;
         });
 
-        // Listen for active users updates
-        socket.on("activeUsers", (activeUsers) => {
-          const activeUsersList = document.getElementById("activeUsersList");
-          const recipientSelect = document.getElementById("recipientSelect");
-
-          activeUsersList.innerHTML = ""; // Clear previous list
-          recipientSelect.innerHTML = ""; // Clear previous recipient options
-
-          activeUsers.forEach(({ username }) => {
-            const li = document.createElement("li");
-            li.textContent = username; // Display username
-            activeUsersList.appendChild(li);
-
-            // Add options to the recipient select dropdown
-            const option = document.createElement("option");
-            option.value = username;
-            option.textContent = username;
-            recipientSelect.appendChild(option);
-          });
-        });
-
-        // Handle connection error
-        socket.on("connect_error", (error) => {
-          document.getElementById("status").innerHTML =
-            "Connection failed: " + error.message;
-          console.error("Connection Error:", error);
-        });
-
-        // Handle disconnection
-        socket.on("disconnect", () => {
-          document.getElementById("status").innerHTML =
-            "Disconnected from the server";
-          console.log("Disconnected from Socket.IO server");
+        // Listen for the 'activeUsers' event and refetch the active users list
+        socket.on("activeUsers", () => {
+          fetchActiveUsers(); // Refetch the active users list
         });
 
         // Listen for incoming messages
         socket.on("directMessage", (data) => {
+          console.log("Received message:", data);
           const messagesList = document.getElementById("messages");
-          const li = document.createElement("li");
-          li.textContent = `${data.sender}: ${data.content}`;
-          messagesList.appendChild(li);
+          const messageElement = document.createElement("div");
+          messageElement.classList.add("message", "received");
+          messageElement.textContent = `${data.from}: ${data.content}`;
+          messagesList.appendChild(messageElement);
+          messagesList.scrollTop = messagesList.scrollHeight; // Scroll to the bottom
         });
       }
 
       // Send message to the selected recipient
       function sendMessage() {
         const message = document.getElementById("message").value;
-        const recipient = document.getElementById("recipientSelect").value;
+        const recipientId = document.getElementById("recipientSelect").value;
+        const from = localStorage.getItem("username");
 
-        if (recipient && message) {
+        if (recipientId && message) {
           socket.emit("sendMessage", {
-            recipient,
+            recipientId: recipientId,
             content: message,
+            from: from,
           });
-          document.getElementById("message").value = ""; // Clear the input field
 
-          console.log("received a message");
+          const messagesList = document.getElementById("messages");
+          const messageElement = document.createElement("div");
+          messageElement.classList.add("message");
+          messageElement.textContent = `You: ${message}`;
+          messagesList.appendChild(messageElement);
+          messagesList.scrollTop = messagesList.scrollHeight; // Scroll to the bottom
+
+          document.getElementById("message").value = ""; // Clear the input field
         } else {
           alert("Please select a recipient and enter a message.");
         }
+      }
+
+      // Function to fetch chat history
+      async function loadChatHistory(recipientId) {
+        try {
+          const response = await fetch(
+            `https://ki-kati.com/api/messages/conversation/${recipientId}`,
+            {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`, // Send the token in the request header
+              },
+            }
+          );
+
+          if (response.ok) {
+            console.log("Chat history loaded successfully");
+            const messages = await response.json();
+            console.log("Messages:", messages);
+            const messagesList = document.getElementById("messages");
+
+            // Clear existing messages before adding new ones
+            messagesList.innerHTML = "";
+
+            // Loop through the messages and append them to the chat
+            messages.forEach((message) => {
+              const messageElement = document.createElement("div");
+              messageElement.classList.add("message");
+
+              console.log("Message:", message);
+
+              // Check if the message is from the logged-in user or the recipient
+              const senderName = message.sender.username || "Unknown"; // Assuming the sender has a 'username' field
+
+              // Set message content and media (if any)
+              let messageContent = `<strong>${senderName}:</strong> ${message.content}`;
+
+              if (message.media && message.media.length > 0) {
+                message.media.forEach((media) => {
+                  if (media.type === "image") {
+                    messageContent += `<br><img src="${media.url}" alt="Image" style="max-width: 100%; height: auto;"/><br>`;
+                  } else if (media.type === "video") {
+                    messageContent += `<br><video controls><source src="${media.url}" type="${media.type}"></video><br>`;
+                  } else {
+                    messageContent += `<br><a href="${media.url}" download>Download ${media.filename}</a><br>`;
+                  }
+                });
+              }
+
+              messageElement.innerHTML = messageContent;
+              messagesList.appendChild(messageElement);
+            });
+
+            // Scroll to the bottom of the chat window
+            messagesList.scrollTop = messagesList.scrollHeight;
+          } else {
+            console.error("Failed to fetch messages:", await response.json());
+          }
+        } catch (error) {
+          console.error("Error fetching chat history:", error);
+        }
+      }
+
+      // Call this function when a recipient is selected to view their chat history
+      document
+        .getElementById("recipientSelect")
+        .addEventListener("change", (event) => {
+          const recipientId = event.target.value; // This is now the ObjectId
+          console.log("Selected recipient:", recipientId);
+          loadChatHistory(recipientId);
+        });
+
+      // Logout function
+      function logout() {
+        // Clear user data from localStorage
+        localStorage.removeItem("token");
+        localStorage.removeItem("username");
+
+        // Disconnect the socket
+        if (socket) {
+          socket.disconnect();
+          console.log("Disconnected from the server");
+        }
+
+        // Update the UI to show the login form and hide the user details
+        document.getElementById("loginForm").style.display = "block";
+        document.getElementById("userDetails").style.display = "none";
+        document.getElementById("status").innerHTML = ""; // Reset status text
+        document.getElementById("loginStatus").innerHTML =
+          "Logged out successfully!";
+
+        console.log("User logged out successfully");
+      }
+
+      // Update the active users list in the UI
+      function updateActiveUsersList(activeUsers) {
+        console.log("Active users:", activeUsers);
+        for (const user of activeUsers) {
+          console.log("Username:", user);
+        }
+        const activeUsersList = document.getElementById("activeUsersList");
+        const recipientSelect = document.getElementById("recipientSelect");
+
+        activeUsersList.innerHTML = ""; // Clear previous list
+        recipientSelect.innerHTML = ""; // Clear previous recipient options
+
+        activeUsers.forEach(({ userId, username, socketId, avatar }) => {
+          console.log("Username:", socketId.username);
+          // Create a list item for each active user
+          const li = document.createElement("li");
+          li.onclick = () => {
+            document.getElementById("recipientSelect").value =
+              socketId.connection_details; // Set recipient ID as value
+          };
+
+          console.log("Socket ID:", socketId.connection_details);
+
+          // Create avatar and username elements
+          const avatarImg = document.createElement("img");
+          avatarImg.src = avatar || "https://i.pravatar.cc/45?img=1"; // Default avatar if none provided
+          avatarImg.classList.add("user-avatar");
+
+          // Create status indicator (green circle)
+          const statusIndicator = document.createElement("div");
+          statusIndicator.classList.add("status-indicator");
+
+          const userName = document.createElement("span");
+          userName.classList.add("user-name");
+          userName.textContent = socketId.username;
+
+          // Append avatar, status indicator, and name to the list item
+          li.appendChild(avatarImg);
+          li.appendChild(statusIndicator);
+          li.appendChild(userName);
+
+          // Append the list item to the active users list
+          activeUsersList.appendChild(li);
+
+          // Add options to the recipient select dropdown
+          const option = document.createElement("option");
+          option.value = userId; // Use the recipient's ObjectId here
+          option.textContent = socketId.username;
+          recipientSelect.appendChild(option);
+        });
       }
     </script>
   </body>
