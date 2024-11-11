@@ -7,7 +7,7 @@ const Message = require("../models/Message");
 
 const router = express.Router();
 
-module.exports = (io) => {
+module.exports = (io, activeUsers) => {
   // Create a group
   router.post("/create", auth, emailVerified, async (req, res) => {
     const { name, members } = req.body; // members is an array of user IDs
@@ -52,6 +52,12 @@ module.exports = (io) => {
         $addToSet: { groups: groupId },
       });
 
+      // Notify all group members that a new user has joined
+      io.to(groupId).emit("userJoined", {
+        message: `${req.user.username} has joined the group.`,
+        groupId,
+      });
+
       res.status(200).json({ message: "Successfully joined the group", group });
     } catch (error) {
       console.log(error);
@@ -76,6 +82,12 @@ module.exports = (io) => {
 
       // Remove the group from the user's groups
       await User.findByIdAndUpdate(req.user.id, { $pull: { groups: groupId } });
+
+      // Notify the group members that the user has left
+      io.to(groupId).emit("userLeft", {
+        message: `${req.user.username} has left the group.`,
+        groupId,
+      });
 
       res.status(200).json({ message: "Successfully left the group" });
     } catch (error) {
@@ -105,7 +117,7 @@ module.exports = (io) => {
 
       await message.save();
 
-      // Emit to all members of the group
+      // Emit the message to all members of the group (broadcasting to all members)
       io.to(groupId).emit("messageReceived", {
         sender: req.user.id,
         groupId,
@@ -136,6 +148,25 @@ module.exports = (io) => {
       console.log(error);
       res.status(500).json({ message: "Server error" });
     }
+  });
+
+  // Socket.IO Events - Real-time Group Management
+
+  // When a user connects to the group, we register them as online
+  io.on("connection", (socket) => {
+    console.log("Client connected to socket");
+
+    // Register a user for a specific group
+    socket.on("joinGroup", (groupId) => {
+      console.log(`User with socketId ${socket.id} joined group ${groupId}`);
+      socket.join(groupId); // Join the group room
+    });
+
+    // When a user disconnects, we remove them from all groups
+    socket.on("disconnect", () => {
+      console.log(`User with socketId ${socket.id} disconnected`);
+      // You can clean up any other resources or user-specific info here
+    });
   });
 
   return router;

@@ -75,10 +75,10 @@ module.exports = (io, activeUsers) => {
             { sender: recipientId, recipient: req.user.id },
           ],
         })
-        .sort({ createdAt: 1 }) // Sort by creation date
-        .populate('sender', 'username') // Populate sender with username
-        .populate('recipient', 'username'); // Populate recipient with username
-  
+          .sort({ createdAt: 1 }) // Sort by creation date
+          .populate("sender", "username") // Populate sender with username
+          .populate("recipient", "username"); // Populate recipient with username
+
         res.status(200).json(messages);
       } catch (error) {
         console.log(error);
@@ -86,7 +86,6 @@ module.exports = (io, activeUsers) => {
       }
     }
   );
-  
 
   // Get all messages for the logged-in user
   router.get("/", auth, emailVerified, async (req, res) => {
@@ -133,10 +132,12 @@ module.exports = (io, activeUsers) => {
   router.get("/active-users", auth, emailVerified, (req, res) => {
     try {
       // Prepare the active users data from the activeUsers Map
-      const activeUserList = Array.from(activeUsers.entries()).map(([userId, socketId]) => ({
-        userId,
-        socketId,
-      }));
+      const activeUserList = Array.from(activeUsers.entries()).map(
+        ([userId, socketId]) => ({
+          userId,
+          socketId,
+        })
+      );
 
       // Send the list of active users back in the response
       res.status(200).json(activeUserList);

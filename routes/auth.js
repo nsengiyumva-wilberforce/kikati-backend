@@ -145,7 +145,22 @@ router.post("/login", async (req, res) => {
       expiresIn: "1h",
     });
 
-    res.json({ token });
+    // Return the token along with user information
+    res.json({
+      token,
+      user: {
+        _id: user._id,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        gender: user.gender,
+        dateOfBirth: user.dateOfBirth,
+        phoneNumber: user.phoneNumber,
+        isEmailConfirmed: user.isEmailConfirmed,
+        groups: user.groups, // Include groups if necessary
+      },
+    });
   } catch (error) {
     console.error(error); // Log the error
     res.status(500).json({ message: "Server error", error: error.message });

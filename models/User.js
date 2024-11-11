@@ -33,6 +33,8 @@ const UserSchema = new mongoose.Schema({
   confirmationCodeExpires: { type: Date }, // Code expiration time
   resetCode: { type: String },
   resetCodeExpires: { type: Date },
+  friends: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // List of friends (references to other users)
+  friendRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // List of users who have sent requests
 });
 
 module.exports = mongoose.model("User", UserSchema);
