@@ -189,6 +189,26 @@ router.post("/reject-friend-request", auth, async (req, res) => {
   }
 });
 
+// List friend requests
+router.get("/friend-requests", auth, async (req, res) => {
+  try {
+    const user = req.user; // The current logged-in user
+
+    // Find the user and get the list of friend requests
+    const userDetails = await User.findById(user.id).select("friendRequests");
+
+    // Retrieve user details of each friend request sender
+    const friendRequests = await User.find({
+      _id: { $in: userDetails.friendRequests },
+    }).select("username firstName lastName email -_id");
+
+    res.json(friendRequests); // Return the list of friend requests
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // List friends
 router.get("/friends", auth, async (req, res) => {
   try {
