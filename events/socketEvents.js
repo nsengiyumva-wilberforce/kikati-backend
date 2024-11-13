@@ -60,11 +60,13 @@ io.on("connection", (socket) => {
         console.log("Message:", message);
   
         await message.save();
+
+        const recipientUsername = recipient.username;
         // Send message to the recipient using their socketId
         io.to(recipient.connection_details).emit("directMessage", {
-          sender: recipient.username,
+          sender: from,
           content,
-          from,
+          recipientUsername,
         });
         console.log(`Message from ${socket.id} to ${recipientId}: ${content}`);
       } else {

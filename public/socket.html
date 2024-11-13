@@ -206,6 +206,8 @@
           messageElement.textContent = `${data.from}: ${data.content}`;
           messagesList.appendChild(messageElement);
           messagesList.scrollTop = messagesList.scrollHeight;
+
+          console.log("Received message:", data);
         });
       }
 
