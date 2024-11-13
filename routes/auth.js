@@ -244,9 +244,16 @@ router.post("/reset-password", async (req, res) => {
 });
 
 // Logout route
-router.post("/logout", auth, (req, res) => {
+router.post("/logout", auth, async (req, res) => {
   try {
-    // Handle logout logic here
+    const userId = req.user.id; // Assuming `req.user` is populated by `auth` middleware with the authenticated user
+    //update isActive and lastActive to false
+    await User.updateOne(
+      { _id: userId },
+      { $set: { isActive: false, lastActive: Date.now() } }
+    );
+
+    // Handle any additional logout logic here, such as clearing tokens if applicable
     res.json({ message: "Logged out successfully." });
   } catch (error) {
     res.status(500).json({ message: error.message });

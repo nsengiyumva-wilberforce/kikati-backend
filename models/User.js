@@ -35,6 +35,8 @@ const UserSchema = new mongoose.Schema({
   resetCodeExpires: { type: Date },
   friends: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // List of friends (references to other users)
   friendRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // List of users who have sent requests
+  isActive: { type: Boolean, default: false }, // Set to false by default
+  lastActive: { type: Date }, // Updated when the user logs out
 });
 
 module.exports = mongoose.model("User", UserSchema);
