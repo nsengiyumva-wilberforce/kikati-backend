@@ -3,8 +3,8 @@ const Message = require("../models/Message");
 const Group = require("../models/Group"); // Assuming you have a Group model for group chat
 
 module.exports = (io, activeUsers) => {
-// Socket.IO Events
-io.on("connection", (socket) => {
+  // Socket.IO Events
+  io.on("connection", (socket) => {
     console.log("Client connected");
   
     // When a user connects, register them as online
@@ -37,11 +37,10 @@ io.on("connection", (socket) => {
         console.log("Error registering user:", err);
       }
     });
-  
+
     // Handle incoming direct messages
     socket.on("sendMessage", async ({ recipientId, content, from }) => {
       // save the message in the database
-
       console.log("recipientId:", recipientId);
       console.log("content:", content);
       console.log("from:", from);
@@ -73,7 +72,29 @@ io.on("connection", (socket) => {
         console.log(`User ${recipientId} not found`);
       }
     });
-  
+
+    // Typing Event: Listen for the "typing" event
+    socket.on('typing', (data) => {
+      const { recipientId, username } = data;
+      const recipient = activeUsers.get(recipientId);
+      if (recipient) {
+        // Send typing event to the recipient
+        io.to(recipient.connection_details).emit('typing', { username });
+        console.log(`${username} is typing..with ${recipient.connection_details}`);
+      }
+    });
+
+    // Stop Typing Event: Listen for the "stop_typing" event
+    socket.on('stop_typing', (data) => {
+      const { recipientId, username } = data;
+      const recipient = activeUsers.get(recipientId);
+      if (recipient) {
+        // Stop typing event to the recipient
+        io.to(recipient.connection_details).emit('stop_typing', { username });
+        console.log(`${username} stopped typing...`);
+      }
+    });
+
     // When a user disconnects, remove them from active users and update the database
     socket.on("disconnect", async () => {
       // Find the user associated with the socket

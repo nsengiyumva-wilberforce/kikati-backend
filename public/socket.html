@@ -198,12 +198,23 @@
           isConnected = true;
         });
 
+        // Listen for typing notifications
+        socket.on("typing", (data) => {
+          const typingStatus = document.getElementById("status");
+          typingStatus.innerHTML = `${data.username} is typing...`;
+          
+          // Hide the typing status after 3 seconds
+          setTimeout(() => {
+            typingStatus.innerHTML = "";
+          }, 3000);
+        });
+
         // Listen for incoming messages
         socket.on("directMessage", (data) => {
           const messagesList = document.getElementById("messages");
           const messageElement = document.createElement("div");
           messageElement.classList.add("message", "received");
-          messageElement.textContent = `${data.from}: ${data.content}`;
+          messageElement.textContent = `${data.recipientUsername}: ${data.content}`;
           messagesList.appendChild(messageElement);
           messagesList.scrollTop = messagesList.scrollHeight;
 
@@ -281,6 +292,21 @@
             "Logout error: " + error.message;
         }
       }
+
+      // Handle typing event
+      function handleTyping() {
+        const message = document.getElementById("message").value;
+        const recipientId = document.getElementById("recipientSelect").value;
+
+        if (message.length > 0 && recipientId) {
+          const from = localStorage.getItem("username");
+          socket.emit("typing", { username: from, recipientId });
+        }
+      }
+
+      document
+        .getElementById("message")
+        .addEventListener("input", handleTyping);
     </script>
   </body>
 </html>
