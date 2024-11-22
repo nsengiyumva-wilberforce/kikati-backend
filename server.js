@@ -13,6 +13,7 @@ const socketAuth = require("./middleware/socketAuth");
 const User = require("./models/User");
 const socketEvents = require("./events/socketEvents"); // Import socket events
 const postRoutes = require("./routes/posts");
+const marketRoutes = require("./routes/market");
 
 // Create an express app
 const app = express();
@@ -50,6 +51,7 @@ app.use("/api/groups", groupRoutes(io));
 app.use("/api/users", userRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/posts", postRoutes(io, activeUsers));
+app.use("/api/market", marketRoutes(io, activeUsers));
 
 // Serve index.html on root route
 app.get("/", (req, res) => {
