@@ -12,6 +12,7 @@ const path = require("path");
 const socketAuth = require("./middleware/socketAuth");
 const User = require("./models/User");
 const socketEvents = require("./events/socketEvents"); // Import socket events
+const postRoutes = require("./routes/posts");
 
 // Create an express app
 const app = express();
@@ -47,7 +48,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes(io, activeUsers)); // Pass activeUsers map
 app.use("/api/groups", groupRoutes(io));
 app.use("/api/users", userRoutes);
-app.use("/uploads", express.static("uploads"));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/api/posts", postRoutes(io, activeUsers));
 
 // Serve index.html on root route
 app.get("/", (req, res) => {

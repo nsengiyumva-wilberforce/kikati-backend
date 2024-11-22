@@ -150,8 +150,6 @@ module.exports = (io, activeUsers) => {
     }
   });
 
-  // Socket.IO Events - Real-time Group Management
-
   // When a user connects to the group, we register them as online
   io.on("connection", (socket) => {
     console.log("Client connected to socket");

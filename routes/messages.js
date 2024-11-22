@@ -5,7 +5,23 @@ const emailVerified = require("../middleware/email-verified"); // Your email ver
 const Message = require("../models/Message");
 
 const router = express.Router();
-const upload = multer({ dest: "uploads/" }); // Specify the upload directory
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "./uploads"); // The folder to save the file
+  },
+  filename: function (req, file, cb) {
+    // Extract file extension from mimetype
+    const ext = file.mimetype.split("/")[1]; // Extract the file extension (e.g., 'png', 'jpeg')
+
+    // Create a unique filename
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+
+    // Save the file with its proper extension
+    cb(null, `${file.fieldname}-${uniqueSuffix}.${ext}`);
+  },
+});
+
+const upload = multer({ storage }); // Specify the upload directory
 
 module.exports = (io, activeUsers) => {
   // Send a message
