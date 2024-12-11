@@ -131,6 +131,41 @@ module.exports = (io, activeUsers) => {
     }
   });
 
+    // Get all groups in the system
+    router.get("/all-groups", auth, emailVerified, async (req, res) => {
+      try {
+        // Fetch all groups
+        const groups = await Group.find().populate("members", "-password");
+  
+        res.status(200).json({ groups });
+      } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: "Server error" });
+      }
+    });
+
+    
+  // Get groups that the logged-in user belongs to
+  router.get("/my-groups", auth, emailVerified, async (req, res) => {
+    try {
+      // Fetch the user with their groups populated
+      const user = await User.findById(req.user.id).populate(
+        "groups",
+        "name members"
+      );
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Send the populated groups back to the user
+      res.status(200).json({ groups: user.groups });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // Optional: Get group details
   router.get("/:id", auth, emailVerified, async (req, res) => {
     try {
@@ -149,6 +184,9 @@ module.exports = (io, activeUsers) => {
       res.status(500).json({ message: "Server error" });
     }
   });
+
+
+
 
   // When a user connects to the group, we register them as online
   io.on("connection", (socket) => {

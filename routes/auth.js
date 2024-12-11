@@ -5,8 +5,85 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const auth = require("../middleware/auth");
 const { sendConfirmationEmail } = require("../services/emailService"); // Adjust the path as needed
+const { OAuth2Client } = require("google-auth-library");
 
 const router = express.Router();
+
+// Function to verify Google ID Token
+async function verifyGoogleIdToken(idToken) {
+  const oauthClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+  try {
+    const response = await oauthClient.verifyIdToken({
+      idToken,
+      audience: [process.env.GOOGLE_CLIENT_ID], // Replace with your Google Client ID(s)
+    });
+    const payload = response.getPayload();
+
+    return payload; // Return payload for further processing
+  } catch (error) {
+    console.error("Error verifying Google ID Token:", error);
+    return null;
+  }
+}
+
+// Google Login/Registration Route
+router.post("/google-login", async (req, res) => {
+  const { idToken } = req.body;
+
+  if (!idToken) {
+    return res.status(400).json({ message: "Google ID token is required" });
+  }
+
+  try {
+    const payload = await verifyGoogleIdToken(idToken);
+
+    if (!payload) {
+      return res.status(400).json({ message: "Invalid Google ID token" });
+    }
+
+    const { email, name, picture } = payload;
+
+    // Check if the user exists
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // Register new user
+      user = new User({
+        email,
+        firstName: name.split(" ")[0],
+        lastName: name.split(" ")[1] || "",
+        profilePicture: picture,
+        isEmailConfirmed: true, // Assume Google emails are confirmed
+        password: null, // Google users won't have a local password
+      });
+
+      await user.save();
+    }
+
+    // Generate JWT
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "12h",
+    });
+
+    // Return the token and user information
+    res.json({
+      token,
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profilePicture: user.profilePicture,
+        isEmailConfirmed: user.isEmailConfirmed,
+      },
+    });
+  } catch (error) {
+    console.error("Google login error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 // Registration route
 router.post("/register", async (req, res) => {
@@ -170,7 +247,6 @@ router.post("/login", async (req, res) => {
 // Request password reset
 router.post("/request-password-reset", async (req, res) => {
   const { email } = req.body;
-  console.log(email);
 
   try {
     const user = await User.findOne({ email });

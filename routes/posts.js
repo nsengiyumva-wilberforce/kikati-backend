@@ -240,16 +240,32 @@ module.exports = (io, activeUsers) => {
     try {
       const post = await Post.findById(postId);
 
+      if (!post) {
+        return res.status(404).json({ message: "Post not found" });
+      }
+
       const comment = {
-        user: req.user.id,
+        user: req.user.id, // Assuming `req.user` is set by your auth middleware
         content,
         createdAt: new Date(),
       };
 
+      // Add the comment to the post
       post.comments.push(comment);
       await post.save();
 
-      res.status(201).json({ message: "Comment added", comment });
+      // Populate the user details for the added comment
+      const populatedPost = await Post.findById(postId).populate({
+        path: "comments.user",
+        select: "-password", // Exclude the password field
+      });
+
+      // Find the newly added comment
+      const addedComment = populatedPost.comments.find(
+        (c) => c.content === comment.content && c.user._id.equals(req.user.id)
+      );
+
+      res.status(201).json({ message: "Comment added", comment: addedComment });
     } catch (error) {
       console.log(error);
       res.status(500).json({ message: "Server error" });
