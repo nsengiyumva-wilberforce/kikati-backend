@@ -3,6 +3,8 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const auth = require("../middleware/auth");
+const emailVerified = require("../middleware/email-verified"); // Your email verification middleware
+
 
 const router = express.Router();
 
