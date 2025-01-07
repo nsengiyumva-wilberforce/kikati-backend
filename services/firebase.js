@@ -1,7 +1,7 @@
 const admin = require("firebase-admin");
 
 // Firebase Admin SDK Initialization
-const serviceAccount = require("../services/kikati-cf755-firebase-adminsdk-zg1xn-a1b3c3cbcf.json");
+const serviceAccount = require("../services/kikati-cf755-firebase-adminsdk-zg1xn-0c8bc19806.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
