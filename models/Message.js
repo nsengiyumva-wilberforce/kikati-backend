@@ -9,11 +9,15 @@ const MessageSchema = new mongoose.Schema({
     type: [
       {
         url: { type: String, required: true }, // URL of the media file
-        type: { type: String, enum: ['image', 'video', 'file'], required: true }, // Type of media
-        filename: { type: String } // Original filename (optional)
-      }
+        type: {
+          type: String,
+          enum: ["image", "video", "file"],
+          required: true,
+        }, // Type of media
+        filename: { type: String }, // Original filename (optional)
+      },
     ],
-    default: [] // Default to an empty array if no media is sent
+    default: [], // Default to an empty array if no media is sent
   },
   timestamp: { type: Date, default: Date.now },
   isActive: { type: Boolean, default: true },

@@ -187,6 +187,32 @@ module.exports = (io, activeUsers) => {
     }
   });
 
+  //get all messages in a group
+  router.get("/messages/:groupId", auth, emailVerified, async (req, res) => {
+    try {
+      const group = await Group.findById(req.params.groupId);
+
+      if (!group) {
+        return res.status(404).json({ message: "Group not found" });
+      }
+
+      // Check if the user is a member of the group
+      if (!group.members.includes(req.user.id)) {
+        return res
+          .status(403)
+          .json({ message: "User not a member of the group" });
+      }
+
+      // Fetch all messages in the group
+      const messages = await Message.find({ groupId: req.params.groupId });
+
+      res.status(200).json({ messages });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // When a user connects to the group, we register them as online
   io.on("connection", (socket) => {
     console.log("Client connected to socket");

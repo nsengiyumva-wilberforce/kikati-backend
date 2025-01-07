@@ -7,7 +7,7 @@ const auth = require("../middleware/auth");
 const router = express.Router();
 
 // Search for users by username, email, first name, or last name
-router.get("/search", async (req, res) => {
+router.get("/search", auth, emailVerified,async (req, res) => {
   const { query } = req.query; // Search query (can be username, email, first name, or last name)
 
   if (!query) {
@@ -31,7 +31,7 @@ router.get("/search", async (req, res) => {
   }
 });
 
-router.post("/send-friend-request", auth, async (req, res) => {
+router.post("/send-friend-request", auth, emailVerified, async (req, res) => {
   const { targetUsername } = req.body; // The username of the user the request is being sent to
 
   try {
@@ -96,7 +96,7 @@ router.post("/send-friend-request", auth, async (req, res) => {
   }
 });
 
-router.post("/accept-friend-request", auth, async (req, res) => {
+router.post("/accept-friend-request", auth, emailVerified,async (req, res) => {
   const { senderUsername } = req.body; // Username of the sender of the friend request
   console.log(senderUsername);
 
@@ -153,7 +153,7 @@ router.post("/accept-friend-request", auth, async (req, res) => {
 });
 
 // Reject friend request
-router.post("/reject-friend-request", auth, async (req, res) => {
+router.post("/reject-friend-request", auth, emailVerified, async (req, res) => {
   const { senderUsername } = req.body; // Username of the sender of the friend request
 
   try {
@@ -190,7 +190,7 @@ router.post("/reject-friend-request", auth, async (req, res) => {
 });
 
 // List friend requests
-router.get("/friend-requests", auth, async (req, res) => {
+router.get("/friend-requests", auth, emailVerified, async (req, res) => {
   try {
     const user = req.user; // The current logged-in user
 
@@ -210,7 +210,7 @@ router.get("/friend-requests", auth, async (req, res) => {
 });
 
 // List friends
-router.get("/friends", auth, async (req, res) => {
+router.get("/friends", auth, emailVerified, async (req, res) => {
   try {
     const user = req.user; // The current logged-in user
     const UserDetails = await User.findById(user.id).select("-password");
@@ -225,7 +225,7 @@ router.get("/friends", auth, async (req, res) => {
 });
 
 //all users
-router.get("/all-users", auth, async (req, res) => {
+router.get("/all-users", auth, emailVerified, async (req, res) => {
   try {
     const users = await User.find().select("-password");
     res.json(users);

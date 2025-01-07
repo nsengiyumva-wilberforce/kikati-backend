@@ -84,7 +84,7 @@ module.exports = (io) => {
   );
 
   // Optional: Get all market items with pagination, filters, and search
-  router.get("/", async (req, res) => {
+  router.get("/", auth, emailVerified, async (req, res) => {
     const {
       page = 1,
       limit = 10,
@@ -137,7 +137,7 @@ module.exports = (io) => {
   });
 
   // Example for fetching an item with images
-  router.get("/:id", async (req, res) => {
+  router.get("/:id", auth, emailVerified, async (req, res) => {
     try {
       const item = await MarketItem.findById(req.params.id).populate(
         "seller",
@@ -215,7 +215,7 @@ module.exports = (io) => {
   });
 
   // Optional: Get all items listed by a specific user
-  router.get("/user/:userId", async (req, res) => {
+  router.get("/user/:userId", auth, emailVerified, async (req, res) => {
     try {
       console.log(req.params.userId);
       const items = await MarketItem.find({ seller: req.params.userId })
