@@ -6,6 +6,7 @@ const jwt = require("jsonwebtoken");
 const auth = require("../middleware/auth");
 const { sendConfirmationEmail } = require("../services/emailService"); // Adjust the path as needed
 const { OAuth2Client } = require("google-auth-library");
+const Token = require("../models/Token"); // Import the Token model
 
 const router = express.Router();
 
@@ -204,14 +205,18 @@ router.post("/resend-code", async (req, res) => {
 
 // Login a user
 router.post("/login", async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, deviceToken } = req.body;
+
+  console.log("username", username);
 
   try {
+    // Find the user
     const user = await User.findOne({ username });
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
+    // Validate the password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(400).json({ message: "Invalid credentials" });
@@ -219,8 +224,29 @@ router.post("/login", async (req, res) => {
 
     // Generate JWT
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "12h",
+      expiresIn: "50h",
     });
+
+    // Save or update the device token
+    if (deviceToken) {
+      await Token.deleteMany({
+        userId: user._id,
+        platform: "android",
+        deviceToken: { $ne: deviceToken },
+      });
+
+      const existingToken = await Token.findOne({
+        userId: user._id,
+        deviceToken,
+      });
+      if (!existingToken) {
+        await Token.create({
+          userId: user._id,
+          deviceToken,
+          platform: "android",
+        });
+      }
+    }
 
     // Return the token along with user information
     res.json({
