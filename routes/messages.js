@@ -126,7 +126,6 @@ module.exports = (io, activeUsers) => {
         const recipientToken = await Token.findOne({
           userId: recipient,
         });
-        console.log("Recipient Token:", recipientToken.deviceToken);
         if (recipientUser && recipientToken.deviceToken) {
           const payload = {
             title: "New Message Received",
