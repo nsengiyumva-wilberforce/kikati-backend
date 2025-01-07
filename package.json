@@ -19,12 +19,14 @@
     "express": "^4.21.0",
     "firebase": "^10.14.1",
     "firebase-admin": "^12.6.0",
+    "geospatial": "^0.1.0",
     "google-auth-library": "^9.15.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.7.0",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.15",
-    "socket.io": "^4.8.0"
+    "socket.io": "^4.8.0",
+    "turf": "^3.0.14"
   },
   "devDependencies": {
     "nodemon": "^3.1.7"

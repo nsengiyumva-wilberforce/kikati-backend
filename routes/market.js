@@ -31,13 +31,13 @@ module.exports = (io) => {
     "/create",
     auth,
     emailVerified,
-    upload.array("images", 5),
+    upload.array("media", 5),
     async (req, res) => {
       const { title, description, price, category, location, quantity } =
         req.body;
 
       // Handle image files
-      const images = req.files ? req.files.map((file) => file.path) : [];
+      const media = req.files ? req.files.map((file) => file.path) : [];
 
       try {
         const newItem = new MarketItem({
@@ -46,7 +46,7 @@ module.exports = (io) => {
           price,
           category,
           location,
-          images,
+          media,
           quantity,
           seller: req.user.id, // The authenticated user is the seller
         });

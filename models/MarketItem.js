@@ -44,7 +44,7 @@ const marketItemSchema = new mongoose.Schema(
         required: [true, "Region is required"], // Ensuring region is provided
       },
     },
-    images: [{ type: String }], // Array of image paths (not URLs)
+    media: [{ type: String }], // Array of image paths (not URLs)
     quantity: {
       type: Number,
       default: 1,
