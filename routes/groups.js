@@ -187,7 +187,7 @@ module.exports = (io, activeUsers) => {
     }
   });
 
-  //get all messages in a group
+  // Get all messages in a group
   router.get("/messages/:groupId", auth, emailVerified, async (req, res) => {
     try {
       const group = await Group.findById(req.params.groupId);
@@ -203,8 +203,11 @@ module.exports = (io, activeUsers) => {
           .json({ message: "User not a member of the group" });
       }
 
-      // Fetch all messages in the group
-      const messages = await Message.find({ groupId: req.params.groupId });
+      // Fetch all messages in the group and populate the related details
+      const messages = await Message.find({ groupId: req.params.groupId })
+        .populate("sender", "-password") // Populate sender details, excluding the password
+        .populate("recipient", "name email") // Populate recipient details (optional)
+        .populate("groupId"); // Populate group details, including everything
 
       res.status(200).json({ messages });
     } catch (error) {
