@@ -193,7 +193,7 @@ module.exports = (io, activeUsers) => {
       const group = await Group.findById(req.params.groupId);
 
       if (!group) {
-        return res.status(404).json({ message: "Group not found" });
+        return res.status(404).json({ message: "Group not found!" });
       }
 
       // Check if the user is a member of the group
