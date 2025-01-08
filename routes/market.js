@@ -45,13 +45,12 @@ module.exports = (io) => {
           description,
           price,
           category,
-          location,
+          city,
+          region,
           media,
           quantity,
           seller: req.user.id, // The authenticated user is the seller
         });
-
-        console.log(req.user.id);
 
         // This will trigger Mongoose's built-in validation
         await newItem.save();
