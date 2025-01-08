@@ -28,56 +28,6 @@ const upload = multer({ storage }); // Specify the upload directory
 
 module.exports = (io, activeUsers) => {
   // Send a message
-  // router.post(
-  //   "/send",
-  //   auth,
-  //   emailVerified,
-  //   upload.array("media"),
-  //   async (req, res) => {
-  //     const { recipient, content } = req.body;
-
-  //     try {
-  //       const mediaFiles = req.files
-  //         ? req.files.map((file) => ({
-  //             url: `/uploads/${file.filename}`, // Assuming you're serving files from the 'uploads' directory
-  //             type: file.mimetype.startsWith("image/")
-  //               ? "image"
-  //               : file.mimetype.startsWith("video/")
-  //               ? "video"
-  //               : "file",
-  //             filename: file.originalname,
-  //           }))
-  //         : [];
-
-  //       const message = new Message({
-  //         sender: req.user.id,
-  //         recipient,
-  //         content,
-  //         media: mediaFiles, // Include media files
-  //       });
-
-  //       await message.save();
-
-  //       // Check if the recipient is online and emit the message directly to them
-  //       if (activeUsers.has(recipient)) {
-  //         const recipientSocketId = activeUsers.get(recipient);
-  //         io.to(recipientSocketId).emit("directMessage", {
-  //           sender: req.user.id,
-  //           content,
-  //           media: mediaFiles, // Include media in the emitted message
-  //         });
-  //       } else {
-  //         console.log("User not found...");
-  //       }
-
-  //       res.status(201).json({ message: "Message sent successfully", message });
-  //     } catch (error) {
-  //       console.log(error);
-  //       res.status(500).json({ message: "Server error" });
-  //     }
-  //   }
-  // );
-
   router.post(
     "/send",
     auth,
@@ -120,25 +70,6 @@ module.exports = (io, activeUsers) => {
           console.log("User not found...");
         }
 
-        // Fetch recipient's token from database (assuming you have it stored)
-        const recipientUser = await User.findById(recipient);
-
-        const recipientToken = await Token.findOne({
-          userId: recipient,
-        });
-        if (recipientUser && recipientToken.deviceToken) {
-          const payload = {
-            title: "New Message Received",
-            body: content || "You have a new message",
-          };
-
-          await sendNotification(
-            recipientToken.deviceToken,
-            JSON.stringify(payload.title),
-            JSON.stringify(payload.body)
-          );
-        }
-
         res.status(201).json({ message: "Message sent successfully", message });
       } catch (error) {
         console.log(error);
@@ -146,6 +77,75 @@ module.exports = (io, activeUsers) => {
       }
     }
   );
+
+  // router.post(
+  //   "/send",
+  //   auth,
+  //   emailVerified,
+  //   upload.array("media"),
+  //   async (req, res) => {
+  //     const { recipient, content } = req.body;
+
+  //     try {
+  //       const mediaFiles = req.files
+  //         ? req.files.map((file) => ({
+  //             url: `/uploads/${file.filename}`, // Assuming you're serving files from the 'uploads' directory
+  //             type: file.mimetype.startsWith("image/")
+  //               ? "image"
+  //               : file.mimetype.startsWith("video/")
+  //               ? "video"
+  //               : "file",
+  //             filename: file.originalname,
+  //           }))
+  //         : [];
+
+  //       const message = new Message({
+  //         sender: req.user.id,
+  //         recipient,
+  //         content,
+  //         media: mediaFiles, // Include media files
+  //       });
+
+  //       await message.save();
+
+  //       // Check if the recipient is online and emit the message directly to them
+  //       if (activeUsers.has(recipient)) {
+  //         const recipientSocketId = activeUsers.get(recipient);
+  //         io.to(recipientSocketId).emit("directMessage", {
+  //           sender: req.user.id,
+  //           content,
+  //           media: mediaFiles, // Include media in the emitted message
+  //         });
+  //       } else {
+  //         console.log("User not found...");
+  //       }
+
+  //       // Fetch recipient's token from database (assuming you have it stored)
+  //       const recipientUser = await User.findById(recipient);
+
+  //       const recipientToken = await Token.findOne({
+  //         userId: recipient,
+  //       });
+  //       if (recipientUser && recipientToken.deviceToken) {
+  //         const payload = {
+  //           title: "New Message Received",
+  //           body: content || "You have a new message",
+  //         };
+
+  //         await sendNotification(
+  //           recipientToken.deviceToken,
+  //           JSON.stringify(payload.title),
+  //           JSON.stringify(payload.body)
+  //         );
+  //       }
+
+  //       res.status(201).json({ message: "Message sent successfully", message });
+  //     } catch (error) {
+  //       console.log(error);
+  //       res.status(500).json({ message: "Server error" });
+  //     }
+  //   }
+  // );
 
   // Get messages between users
   router.get(
