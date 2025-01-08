@@ -10,82 +10,6 @@ const Token = require("../models/Token"); // Import the Token model
 
 const router = express.Router();
 
-// Function to verify Google ID Token
-async function verifyGoogleIdToken(idToken) {
-  const oauthClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
-  try {
-    const response = await oauthClient.verifyIdToken({
-      idToken,
-      audience: [process.env.GOOGLE_CLIENT_ID], // Replace with your Google Client ID(s)
-    });
-    const payload = response.getPayload();
-
-    return payload; // Return payload for further processing
-  } catch (error) {
-    console.error("Error verifying Google ID Token:", error);
-    return null;
-  }
-}
-
-// Google Login/Registration Route
-router.post("/google-login", async (req, res) => {
-  const { idToken } = req.body;
-
-  if (!idToken) {
-    return res.status(400).json({ message: "Google ID token is required" });
-  }
-
-  try {
-    const payload = await verifyGoogleIdToken(idToken);
-
-    if (!payload) {
-      return res.status(400).json({ message: "Invalid Google ID token" });
-    }
-
-    const { email, name, picture } = payload;
-
-    // Check if the user exists
-    let user = await User.findOne({ email });
-
-    if (!user) {
-      // Register new user
-      user = new User({
-        email,
-        firstName: name.split(" ")[0],
-        lastName: name.split(" ")[1] || "",
-        profilePicture: picture,
-        isEmailConfirmed: true, // Assume Google emails are confirmed
-        password: null, // Google users won't have a local password
-      });
-
-      await user.save();
-    }
-
-    // Generate JWT
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "12h",
-    });
-
-    // Return the token and user information
-    res.json({
-      token,
-      user: {
-        _id: user._id,
-        username: user.username,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        profilePicture: user.profilePicture,
-        isEmailConfirmed: user.isEmailConfirmed,
-      },
-    });
-  } catch (error) {
-    console.error("Google login error:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
 // Registration route
 router.post("/register", async (req, res) => {
   const {
@@ -136,6 +60,82 @@ router.post("/register", async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+// Profile route (Fetch the authenticated user's profile information)
+router.get("/profile", auth, async (req, res) => {
+  try {
+    // Retrieve the user's details from the database using the user ID from the JWT token
+    const user = await User.findById(req.user.id).select("-password"); // Exclude the password from the response
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({
+      user: {
+        _id: user._id,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        gender: user.gender,
+        dateOfBirth: user.dateOfBirth,
+        phoneNumber: user.phoneNumber,
+        isEmailConfirmed: user.isEmailConfirmed,
+        groups: user.groups, // Include groups if necessary
+        isActive: user.isActive, // Include the active status if needed
+        lastActive: user.lastActive, // Include the last active time if needed
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Edit Profile route (Allow users to update their profile information)
+router.put("/profile", auth, async (req, res) => {
+  const { firstName, lastName, gender, dateOfBirth, phoneNumber } = req.body;
+
+  try {
+    // Find the user by their ID
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Update only the fields that are provided
+    if (firstName) user.firstName = firstName;
+    if (lastName) user.lastName = lastName;
+    if (gender) user.gender = gender;
+    if (dateOfBirth) user.dateOfBirth = dateOfBirth;
+    if (phoneNumber) user.phoneNumber = phoneNumber;
+
+    // Save the updated user details
+    await user.save();
+
+    res.json({
+      message: "Profile updated successfully.",
+      user: {
+        _id: user._id,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        gender: user.gender,
+        dateOfBirth: user.dateOfBirth,
+        phoneNumber: user.phoneNumber,
+        isEmailConfirmed: user.isEmailConfirmed,
+        groups: user.groups, // Include groups if necessary
+        isActive: user.isActive,
+        lastActive: user.lastActive,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 
 // Verify confirmation code
 router.post("/verify-code", async (req, res) => {
