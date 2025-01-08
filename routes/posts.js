@@ -79,6 +79,7 @@ module.exports = (io, activeUsers) => {
         .limit(Number(limit))
         .populate("author", "username firstName lastName") // Populate author details
         .populate("comments.user", "username")
+        .populate("comments.replies.user", "username")
         .sort({ createdAt: -1 }); // Sort by creation date (newest first)
 
       res.status(200).json(posts);
