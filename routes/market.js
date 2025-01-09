@@ -33,7 +33,7 @@ module.exports = (io) => {
     emailVerified,
     upload.array("media", 5),
     async (req, res) => {
-      const { title, description, price, category, location, quantity } =
+      const { title, description, price, category, city, region, quantity } =
         req.body;
 
       // Handle image files
