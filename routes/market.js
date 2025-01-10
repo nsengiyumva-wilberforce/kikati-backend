@@ -33,7 +33,7 @@ module.exports = (io) => {
     emailVerified,
     upload.array("media", 5),
     async (req, res) => {
-      const { title, description, price, category, city, region, quantity } =
+      const { title, description, price, category, location, quantity } =
         req.body;
 
       // Handle image files
@@ -45,8 +45,7 @@ module.exports = (io) => {
           description,
           price,
           category,
-          city,
-          region,
+          location,
           media,
           quantity,
           seller: req.user.id, // The authenticated user is the seller

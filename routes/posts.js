@@ -3,7 +3,7 @@ const multer = require("multer");
 const auth = require("../middleware/auth"); // Your auth middleware
 const emailVerified = require("../middleware/email-verified"); // Your email verification middleware
 const Post = require("../models/Post");
-
+const User = require("../models/User");
 const router = express.Router();
 
 const storage = multer.diskStorage({
@@ -304,6 +304,8 @@ module.exports = (io, activeUsers) => {
       const { postId, commentId } = req.params;
       const { content } = req.body;
 
+      console.log("Replying to comment", commentId);
+
       try {
         const post = await Post.findById(postId);
         if (!post) {
@@ -315,20 +317,30 @@ module.exports = (io, activeUsers) => {
         if (!comment) {
           return res.status(404).json({ message: "Comment not found" });
         }
-
-        // Add the reply to the comment's replies array
-        comment.replies.push({
+        let reply = {
           user: req.user.id,
           content,
           createdAt: new Date(),
-        });
+        };
+
+        // Add the reply to the comment's replies array
+        comment.replies.push(reply);
+
+        //get user details, just username
+        const user = await User.findById(req.user.id, "username");
+
+        //add details to reply under key user
+        reply = {
+          ...reply,
+          username: user.username
+        };
 
         // Save the post with the new reply
         await post.save();
 
         res.status(201).json({
           message: "Reply added",
-          reply: comment.replies[comment.replies.length - 1],
+          reply: reply,
         });
       } catch (error) {
         console.log(error);
